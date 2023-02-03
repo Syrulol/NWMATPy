@@ -1,5 +1,6 @@
 # NWMATPy
-New World Market Assessment Toolkit (Py) is a Python export of R-based New World Market Assessment Toolkit
+New World Market Assessment Toolkit (Py) is a Python export of R-based New World Market Assessment Toolkit.
+
 Data structure has been rearranged to prevent extensive API-queries and to facilitate automated archival of data. 
 
 New World Market Assessment Toolkit is a set of scripts and functions designed to automate data scraping from https://www.nwmarketprices.com/.
