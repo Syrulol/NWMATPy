@@ -10,6 +10,6 @@ Further functionality will be imported from existent NWMAT to allow for various 
 
 The express purpose of NWMAT is to pipe .csv formatted documents into Tableau and other data viz software for dashboard output.
 
-#TODO/Bugs:
+# TODO/Bugs:
 * While/For loops on HTTP requests may result in the program looping for extended periods of time until HTTP response 200 is received.
 * Add functionality for pulling cached data into data frames for analysis functions.
