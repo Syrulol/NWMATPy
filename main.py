@@ -13,6 +13,7 @@ import datetime
 apiRoot = "https://nwmarketprices.com/api/"
 vars_dict = {}
 
+
 # This is messy, I need to handle exceptions when the resource wasn't fetched in a manner that gracefully terminates.
 # Right now this will pass on an exception string as a JSON object if it 404's, or a null for other responses.
 def queryapi(suburl):
@@ -31,7 +32,7 @@ def queryapi(suburl):
         # If the response isn't a 200, it's likely a 403. Sleep for rate limiting.
         if httpresponse != 200:
             retries += 1
-            print('Sleeping %f seconds.' % (retries*pausescaling))
+            print('Sleeping %f seconds.' % (retries * pausescaling))
             tm.sleep(retries * pausescaling)
     return jsonresponse
 
@@ -84,7 +85,6 @@ def getupdatequeries():
 
 # Only needs to be run on first initialization. Populates cache with a query-all type approach.
 def populatemarketdata():
-    http = ul.PoolManager()
     serverdf = getservercache()
     # Index helper for looping as a function of server ID's rather than index in the data frame.
     index = 0
@@ -134,3 +134,6 @@ def runupdatequeries():
         marketjson.to_csv('data/' + targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0] + '.csv')
     # Updates the serverdata.csv now that all information is up-to-date as of now.
     getserverstatus()
+
+
+runupdatequeries()
