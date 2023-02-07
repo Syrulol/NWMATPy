@@ -1,6 +1,5 @@
 # Lib Declarations
 # TODO: Clean up scope maybe.
-
 import os
 import numpy as np
 import pandas as pd
@@ -8,7 +7,8 @@ import urllib3 as ul
 import json
 import time as tm
 import shutil as stl
-import datetime
+import string
+
 
 # Establish Global Variables
 # TODO: server_dict will be used for pulling data frames into the working memory.
@@ -77,11 +77,11 @@ def getupdatequeries():
     modvalue = np.where(serverdata['server_last_updated'] != comparedata['server_last_updated'])
     print("Update required for... " + serverdata.iloc[modvalue]['server_name'])
     # Some data frame structuring for the return object.
-    returndataserverid = serverdata.iloc[modvalue]['server_id']
-    returndataservername = serverdata.iloc[modvalue]['server_name']
     returndataframe = pd.DataFrame()
-    returndataframe['server_id'] = returndataserverid
-    returndataframe['server_name'] = returndataservername
+    returndataframe['server_id'] = serverdata.iloc[modvalue]['server_id']
+    returndataframe['server_name'] = serverdata.iloc[modvalue]['server_name']
+    returndataframe['last_timestamp'] = comparedata.iloc[modvalue]['server_last_updated']
+    returndataframe['curr_timestamp'] = serverdata.iloc[modvalue]['server_last_updated']
     return returndataframe
 
 
@@ -115,21 +115,20 @@ def getservermarketbyname(marketarg):
 
 
 # Pulls JSON for servers listed from getupdatequeries() and archives the old data to data/archive with timestamping.
-# Timestamp is when it was archived, not when the data was from. Not sure which is more useful right now.
 def runupdatequeries():
     targetupdates = getupdatequeries()
-    targetupdates.set_index(['server_id'])
     for x in targetupdates['server_id']:
         marketjsonstream = queryapi('latest-prices/' + str(x))
         # Flatten and normalize JSON.
         marketjson = pd.json_normalize(json.loads(marketjsonstream.data.decode('utf-8')))
         # Gets the server name currently being manipulated for reference in filenames.
         servername = targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0]
-        # Timestamp string for appending to archival.
-        timestamp = datetime.datetime.now()
-        timestampformat = timestamp.strftime('%d%m%Y-%H%M%S')
+        # Gets the last queried timestamp of the server currently being manipulated for reference in filenames.
+        timestamp = targetupdates.loc[targetupdates['server_id'] == x, 'last_timestamp'].iloc[0]
+        print(timestamp)
+        timestampformat = timestamp[0:10] + 'T' + timestamp[11:19].translate(str.maketrans('', '', string.punctuation))
         # Moves the current server being queried into the archive with <servername><timestamp>.csv format.
-        print('Archiving ' + servername + ' to data/archive/ as ' + servername + timestampformat)
+        print('Archiving ' + servername + ' to data/archive/ as ' + servername + ' ' + timestampformat + '.csv')
         stl.move("data/" + servername + ".csv", "data/archive/" + servername + ' ' + timestampformat + '.csv')
         # Writes a new .csv with the <servername>.csv format at /data/
         print('Printing ' + servername + ' to .CSV')
