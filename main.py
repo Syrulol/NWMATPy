@@ -1,5 +1,7 @@
 # Lib Declarations
 # TODO: Clean up scope maybe.
+
+import os
 import numpy as np
 import pandas as pd
 import urllib3 as ul
@@ -9,9 +11,9 @@ import shutil as stl
 import datetime
 
 # Establish Global Variables
-# TODO: vars_dict will be used for pulling data frames into the working memory.
+# TODO: server_dict will be used for pulling data frames into the working memory.
 apiRoot = "https://nwmarketprices.com/api/"
-vars_dict = {}
+server_dict = {}
 
 
 # This is messy, I need to handle exceptions when the resource wasn't fetched in a manner that gracefully terminates.
@@ -21,7 +23,7 @@ def queryapi(suburl):
     httpresponse = 0
     retries = 0
     retrylim = 10  # This should be a global variable pulled from .cfg eventually.
-    pausescaling = .5  # Controls how fast the pause variable grows.
+    pausescaling = 5  # Controls how fast the pause variable grows.
     # Repeats query until it receives a 200 (OK) response or until retrylim is hit.
     while httpresponse != 200 and retries <= retrylim:
         jsonresponse = http.request(
@@ -136,4 +138,17 @@ def runupdatequeries():
     getserverstatus()
 
 
-runupdatequeries()
+# Pulls a list of CSV objects in the CWD data folder into the server_dict.
+# Key: String Server Name, Value: Pandas.Dataframe
+def fetchcsvs():
+    for item in os.listdir('data/'):
+        if item[-4:] == '.csv' and item[0:-4] != "serverdata":
+            server_dict[item[0:-4]] = pd.read_csv('data/' + item)
+
+
+# Fetches CSV's, populates a data frame with all server data, then filters that data by item and applies the
+# pandas mean() function. Drops NaN.
+def getmeanbyitem(itemname):
+    fetchcsvs()
+    returndf = pd.concat(server_dict.values())
+    return returndf[returndf['ItemName'] == itemname]["Price"].mean()
