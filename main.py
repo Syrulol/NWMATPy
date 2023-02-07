@@ -9,9 +9,7 @@ import time as tm
 import shutil as stl
 import string
 
-
 # Establish Global Variables
-# TODO: server_dict will be used for pulling data frames into the working memory.
 apiRoot = "https://nwmarketprices.com/api/"
 server_dict = {}
 
@@ -75,7 +73,8 @@ def getupdatequeries():
         comparedata = getserverstatus()
     # Compare the cache against the API request to identify servers that are out of date.
     modvalue = np.where(serverdata['server_last_updated'] != comparedata['server_last_updated'])
-    print("Update required for... " + serverdata.iloc[modvalue]['server_name'])
+    if not modvalue:
+        print("Update required for... " + serverdata.iloc[modvalue]['server_name'])
     # Some data frame structuring for the return object.
     returndataframe = pd.DataFrame()
     returndataframe['server_id'] = serverdata.iloc[modvalue]['server_id']
@@ -115,8 +114,11 @@ def getservermarketbyname(marketarg):
 
 
 # Pulls JSON for servers listed from getupdatequeries() and archives the old data to data/archive with timestamping.
+# Returns true if updates were written, and false if no updates were required.
 def runupdatequeries():
     targetupdates = getupdatequeries()
+    if targetupdates.empty:
+        return False
     for x in targetupdates['server_id']:
         marketjsonstream = queryapi('latest-prices/' + str(x))
         # Flatten and normalize JSON.
@@ -134,6 +136,7 @@ def runupdatequeries():
         marketjson.to_csv('data/' + targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0] + '.csv')
     # Updates the serverdata.csv now that all information is up-to-date as of now.
     getserverstatus()
+    return True
 
 
 # Pulls a list of CSV objects in the CWD data folder into the server_dict.
