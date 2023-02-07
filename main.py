@@ -125,7 +125,6 @@ def runupdatequeries():
         servername = targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0]
         # Gets the last queried timestamp of the server currently being manipulated for reference in filenames.
         timestamp = targetupdates.loc[targetupdates['server_id'] == x, 'last_timestamp'].iloc[0]
-        print(timestamp)
         timestampformat = timestamp[0:10] + 'T' + timestamp[11:19].translate(str.maketrans('', '', string.punctuation))
         # Moves the current server being queried into the archive with <servername><timestamp>.csv format.
         print('Archiving ' + servername + ' to data/archive/ as ' + servername + ' ' + timestampformat + '.csv')
