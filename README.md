@@ -12,4 +12,7 @@ Further functionality will be imported from existent NWMAT to allow for various 
 The express purpose of NWMAT is to pipe .csv formatted documents into Tableau and other data viz software for dashboard output.
 
 # TODO/Bugs:
-* Add functionality for pulling cached data into data frames for analysis functions.
+* No error handling for RetryLimit in HTTP GET request. Should only ever occur if a connection cannot be established to NWMarketPrices API. 
+* Various analysis functions for economic standing metrics. (Mean Absolute Deviation, Average Deviation, etc.) 
+* Very basic GUI. 
+* Config file to adjust rate limiting intervals, file write locations, etc. 
