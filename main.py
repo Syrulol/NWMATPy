@@ -1,13 +1,16 @@
 # Lib Declarations
 # TODO: Clean up scope maybe.
+import json
 import os
+import shutil as stl
+import string
+import sys
+import time as tm
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import urllib3 as ul
-import json
-import time as tm
-import shutil as stl
-import string
 
 # Establish Global Variables
 apiRoot = "https://nwmarketprices.com/api/"
@@ -25,14 +28,15 @@ def queryapi(suburl):
     # Repeats query until it receives a 200 (OK) response or until retrylim is hit.
     while httpresponse != 200 and retries <= retrylim:
         jsonresponse = http.request(
-            'GET', apiRoot + suburl, timeout=4.0, retries=2
+            'GET', apiRoot + suburl, timeout=5.0, retries=5
         )
         httpresponse = jsonresponse.status
-        print('HTTP Response ' + str(httpresponse) + ' at ' + apiRoot + suburl)
+        timestamp = str(datetime.now())
+        print(timestamp + ' | HTTP Response ' + str(httpresponse) + ' at ' + apiRoot + suburl)
         # If the response isn't a 200, it's likely a 403. Sleep for rate limiting.
         if httpresponse != 200:
             retries += 1
-            print('Sleeping %f seconds.' % (retries * pausescaling))
+            print(timestamp + ' | Sleeping %f seconds.' % (retries * pausescaling))
             tm.sleep(retries * pausescaling)
     return jsonresponse
 
@@ -73,14 +77,19 @@ def getupdatequeries():
         comparedata = getserverstatus()
     # Compare the cache against the API request to identify servers that are out of date.
     modvalue = np.where(serverdata['server_last_updated'] != comparedata['server_last_updated'])
-    if not modvalue:
-        print("Update required for... " + serverdata.iloc[modvalue]['server_name'])
     # Some data frame structuring for the return object.
     returndataframe = pd.DataFrame()
     returndataframe['server_id'] = serverdata.iloc[modvalue]['server_id']
     returndataframe['server_name'] = serverdata.iloc[modvalue]['server_name']
     returndataframe['last_timestamp'] = comparedata.iloc[modvalue]['server_last_updated']
     returndataframe['curr_timestamp'] = serverdata.iloc[modvalue]['server_last_updated']
+    if np.any(modvalue):
+        for server_name in returndataframe['server_name']:
+            timestamp = str(datetime.now())
+            print(timestamp + " | Update required for " + server_name)
+    else:
+        timestamp = str(datetime.now())
+        print(timestamp + " | No update required.")
     return returndataframe
 
 
@@ -129,10 +138,13 @@ def runupdatequeries():
         timestamp = targetupdates.loc[targetupdates['server_id'] == x, 'last_timestamp'].iloc[0]
         timestampformat = timestamp[0:10] + 'T' + timestamp[11:19].translate(str.maketrans('', '', string.punctuation))
         # Moves the current server being queried into the archive with <servername><timestamp>.csv format.
-        print('Archiving ' + servername + ' to data/archive/ as ' + servername + ' ' + timestampformat + '.csv')
+        nowtimestamp = str(datetime.now())
+        print(
+            nowtimestamp + ' | Archiving ' + servername + ' to data/archive/ as ' + servername +
+            ' ' + timestampformat + '.csv')
         stl.move("data/" + servername + ".csv", "data/archive/" + servername + ' ' + timestampformat + '.csv')
         # Writes a new .csv with the <servername>.csv format at /data/
-        print('Printing ' + servername + ' to .CSV')
+        print(nowtimestamp + ' | Printing ' + servername + ' to .csv')
         marketjson.to_csv('data/' + targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0] + '.csv')
     # Updates the serverdata.csv now that all information is up-to-date as of now.
     getserverstatus()
@@ -153,3 +165,16 @@ def getmeanbyitem(itemname):
     fetchcsvs()
     returndf = pd.concat(server_dict.values())
     return returndf[returndf['ItemName'] == itemname]["Price"].mean()
+
+# Calls runupdatequeries() with an output parameter. At the moment, only accepts log, which outputs to 
+# logfile.txt. Any other strings besides 'log' will result in output to console. 
+def runwithoutput(output):
+    nowtimestamp = str(datetime.now())
+    if output == 'log':
+        sys.stdout = open('logfile.txt', 'a')
+        print(nowtimestamp + ' | START')
+        runupdatequeries()
+        print(nowtimestamp + ' | STOP')
+        sys.stdout.close()
+    else:
+        runupdatequeries()
