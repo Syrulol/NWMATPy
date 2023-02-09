@@ -192,3 +192,5 @@ def runwithoutput(output):
         sys.stderr.close()
     else:
         runupdatequeries()
+
+        
