@@ -13,7 +13,7 @@ import pandas as pd
 import urllib3 as ul
 
 # Establish Global Variables
-apiRoot = "https://nwmarketprices.com/api/"
+apiRoot = 'https://nwmarketprices.com/api/'
 server_dict = {}
 
 
@@ -86,10 +86,10 @@ def getupdatequeries():
     if np.any(modvalue):
         for server_name in returndataframe['server_name']:
             timestamp = str(datetime.now())
-            print(timestamp + " | Update required for " + server_name)
+            print(timestamp + ' | Update required for ' + server_name)
     else:
         timestamp = str(datetime.now())
-        print(timestamp + " | No update required.")
+        print(timestamp + ' | No update required.')
     return returndataframe
 
 
@@ -110,6 +110,7 @@ def populatemarketdata():
         print('data/' + serverdf.iloc[index]['server_name'] + '.csv')
         index += 1
         print(index)
+    return None
 
 
 # Helper function to query a specific server. This doesn't have rate limiting built in and no error handling.
@@ -120,6 +121,7 @@ def getservermarketbyname(marketarg):
     marketjsonstream = queryapi('latest-prices/' + str(serverid))
     marketjson = pd.json_normalize(json.loads(marketjsonstream.data.decode('utf-8')))
     marketjson.to_csv('data/' + marketarg + '.csv')
+    return None
 
 
 # Pulls JSON for servers listed from getupdatequeries() and archives the old data to data/archive with timestamping.
@@ -142,7 +144,7 @@ def runupdatequeries():
         print(
             nowtimestamp + ' | Archiving ' + servername + ' to data/archive/ as ' + servername +
             ' ' + timestampformat + '.csv')
-        stl.move("data/" + servername + ".csv", "data/archive/" + servername + ' ' + timestampformat + '.csv')
+        stl.move("data/" + servername + '.csv', 'data/archive/' + servername + ' ' + timestampformat + '.csv')
         # Writes a new .csv with the <servername>.csv format at /data/
         print(nowtimestamp + ' | Printing ' + servername + ' to .csv')
         marketjson.to_csv('data/' + targetupdates.loc[targetupdates['server_id'] == x, 'server_name'].iloc[0] + '.csv')
@@ -156,15 +158,16 @@ def runupdatequeries():
 def fetchcsvs():
     for item in os.listdir('data/'):
         if item[-4:] == '.csv' and item[0:-4] != "serverdata":
-            server_dict[item[0:-4]] = pd.read_csv('data/' + item)
+            server_dict[item[0:-4]] = pd.read_csv('data/' + item).set_index('Unnamed: 0')
+            server_dict[item[0:-4]]['Server'] = item[0:-4]
+    return None
 
 
-# Fetches CSV's, populates a data frame with all server data, then filters that data by item and applies the
-# pandas mean() function. Drops NaN.
-def getmeanbyitem(itemname):
+# Fetches all instances of itemname from csv's, returns a dataframe.
+def getallitems(itemname):
     fetchcsvs()
     returndf = pd.concat(server_dict.values())
-    return returndf[returndf['ItemName'] == itemname]["Price"].mean()
+    return returndf[returndf['ItemName'] == itemname]
 
 
 # Returns the data frame of a server by name.
@@ -181,7 +184,8 @@ def getitemdataframe(itemname, servername):
 
 # Calls runupdatequeries() with an output parameter. At the moment, only accepts log, which outputs to
 # logfile.txt. Any other strings besides 'log' will result in output to console.
-def runwithoutput(output):
+# Open on finish will open the default text editor with the logfile Default False.
+def runwithoutput(output='', openonfinish=False):
     if output == 'log':
         sys.stdout = open('logfile.txt', 'a')
         sys.stderr = open('errorlog.txt', 'a')
@@ -190,7 +194,10 @@ def runwithoutput(output):
         print(str(datetime.now()) + ' | STOP')
         sys.stdout.close()
         sys.stderr.close()
+        if openonfinish:
+            os.startfile('logfile.txt')
+
     else:
         runupdatequeries()
+    return None
 
-        
