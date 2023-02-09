@@ -166,15 +166,29 @@ def getmeanbyitem(itemname):
     returndf = pd.concat(server_dict.values())
     return returndf[returndf['ItemName'] == itemname]["Price"].mean()
 
-# Calls runupdatequeries() with an output parameter. At the moment, only accepts log, which outputs to 
-# logfile.txt. Any other strings besides 'log' will result in output to console. 
+
+# Returns the data frame of a server by name.
+def getserverdataframe(servername):
+    fetchcsvs()
+    return server_dict[servername]
+
+
+# Returns the data frame of an item by server and item name.
+def getitemdataframe(itemname, servername):
+    returnframe = getserverdataframe(servername)
+    return returnframe[returnframe['ItemName'] == itemname]
+
+
+# Calls runupdatequeries() with an output parameter. At the moment, only accepts log, which outputs to
+# logfile.txt. Any other strings besides 'log' will result in output to console.
 def runwithoutput(output):
-    nowtimestamp = str(datetime.now())
     if output == 'log':
         sys.stdout = open('logfile.txt', 'a')
-        print(nowtimestamp + ' | START')
+        sys.stderr = open('errorlog.txt', 'a')
+        print(str(datetime.now()) + ' | START')
         runupdatequeries()
-        print(nowtimestamp + ' | STOP')
+        print(str(datetime.now()) + ' | STOP')
         sys.stdout.close()
+        sys.stderr.close()
     else:
         runupdatequeries()
