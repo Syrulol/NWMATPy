@@ -56,7 +56,7 @@ def getserverstatus():
 
 
 # Reads serverdata.csv as a data frame for manipulation.
-def getservercache():
+def getserverdatacache():
     return pd.read_csv('data/serverdata.csv')
 
 
@@ -83,6 +83,7 @@ def getupdatequeries():
     returndataframe['server_name'] = serverdata.iloc[modvalue]['server_name']
     returndataframe['last_timestamp'] = comparedata.iloc[modvalue]['server_last_updated']
     returndataframe['curr_timestamp'] = serverdata.iloc[modvalue]['server_last_updated']
+    # Workaround to suppress output in the console/logfile.
     if np.any(modvalue):
         for server_name in returndataframe['server_name']:
             timestamp = str(datetime.now())
@@ -95,7 +96,7 @@ def getupdatequeries():
 
 # Only needs to be run on first initialization. Populates cache with a query-all type approach.
 def populatemarketdata():
-    serverdf = getservercache()
+    serverdf = getserverdatacache()
     # Index helper for looping as a function of server ID's rather than index in the data frame.
     index = 0
     # Loops through every server in the serverID list.
@@ -155,7 +156,7 @@ def runupdatequeries():
 
 # Pulls a list of CSV objects in the CWD data folder into the server_dict.
 # Key: String Server Name, Value: Pandas.Dataframe
-def fetchcsvs():
+def fetchservercache():
     for item in os.listdir('data/'):
         if item[-4:] == '.csv' and item[0:-4] != "serverdata":
             server_dict[item[0:-4]] = pd.read_csv('data/' + item).set_index('Unnamed: 0')
@@ -165,14 +166,14 @@ def fetchcsvs():
 
 # Fetches all instances of itemname from csv's, returns a dataframe.
 def getallitems(itemname):
-    fetchcsvs()
+    fetchservercache()
     returndf = pd.concat(server_dict.values())
     return returndf[returndf['ItemName'] == itemname]
 
 
 # Returns the data frame of a server by name.
 def getserverdataframe(servername):
-    fetchcsvs()
+    fetchservercache()
     return server_dict[servername]
 
 
@@ -182,10 +183,21 @@ def getitemdataframe(itemname, servername):
     return returnframe[returnframe['ItemName'] == itemname]
 
 
+# Returns price history by server and item name.
+def itemhistory(itemname, servername):
+    nwdbid = lookupnwdbid(itemname)
+    serverid = lookupserverid(servername)
+    returnframe = pd.json_normalize(json.loads((queryapi(serverid + '/?cn_id=' + nwdbid).data.decode('utf-8'))),
+                                    ['price_graph_data'])
+    returnframe['server'] = servername
+    returnframe['item'] = itemname
+    return returnframe[['avail', 'date_only', 'avg_price','server','item']]
+
+
 # Calls runupdatequeries() with an output parameter. At the moment, only accepts log, which outputs to
 # logfile.txt. Any other strings besides 'log' will result in output to console.
 # Open on finish will open the default text editor with the logfile Default False.
-def runwithoutput(output='', openonfinish=False):
+def updatewithoutput(output='', openonfinish=False):
     if output == 'log':
         sys.stdout = open('logfile.txt', 'a')
         sys.stderr = open('errorlog.txt', 'a')
@@ -200,4 +212,35 @@ def runwithoutput(output='', openonfinish=False):
     else:
         runupdatequeries()
     return None
+
+
+# Returns a flat data frame with all cached server data.
+def batchmerge():
+    fetchservercache()
+    return pd.concat(server_dict.values())
+
+
+# Quereies API for updated item ID database, caches into .data/static/itemdata.csv
+def populateitemids():
+    itemJSON = queryapi('confirmed_names/').data.decode('utf-8')
+    outdataframe = pd.read_json(itemJSON, orient='index')
+    outdataframe.to_csv('data/static/' + 'itemdata' + '.csv')
+    return None
+
+
+# Pulls item ID's from cache back into dataframe and drops unnecessary data.
+def fetchitemcache():
+    return pd.read_csv('data/static/itemdata.csv').drop('Unnamed: 0', axis=1)
+
+
+# Helper function to return an item's ID from its item name.
+def lookupnwdbid(itemname):
+    itemdata = fetchitemcache()
+    return itemdata[itemdata['name'] == itemname]['nwdb_id'].values[0]
+
+
+# Helper function to return a server's ID by its name.
+def lookupserverid(servername):
+    serverdata = getserverdatacache()
+    return str(serverdata[serverdata['server_name'] == servername]['server_id'].values[0])
 
